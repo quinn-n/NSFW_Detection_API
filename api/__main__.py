@@ -13,10 +13,11 @@ async def detect_nsfw(url: str):
     if not url:
         return {"ERROR": "URL PARAMETER EMPTY"}
     image = await download_image(url)
+    click.echo(f"Got image path {image}")
     if not image:
         return {"ERROR": "IMAGE SIZE TOO LARGE OR INCORRECT URL"}
-    results = predict.classify(model, image)
-    os.remove(image)
+    results = predict.classify(model, image.name)
+    image.close()
     hentai = results["data"]["hentai"]
     sexy = results["data"]["sexy"]
     porn = results["data"]["porn"]
