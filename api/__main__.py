@@ -3,6 +3,7 @@ from api.functions import download_image
 from config import PORT
 import os
 import uvicorn
+import click
 
 model = predict.load_model("nsfw_detector/nsfw_model.h5")
 
@@ -35,12 +36,25 @@ async def detect_nsfw(url: str):
         return results
 
 
-if __name__ == "__main__":
+@click.command()
+@click.option(
+    "--local",
+    "-l",
+    default=False,
+    is_flag=True,
+    type=bool,
+    help="Runs api without ssl for local testing",
+)
+def run_app(local: bool) -> None:
     uvicorn.run(
         "api:app",
         host="0.0.0.0",
         port=PORT,
         log_level="debug",
-        ssl_keyfile=".certificates/privkey.pem",
-        ssl_certfile=".certificates/fullchain.pem",
+        ssl_keyfile=".certificates/privkey.pem" if not local else None,
+        ssl_certfile=".certificates/fullchain.pem" if not local else None,
     )
+
+
+if __name__ == "__main__":
+    run_app()
