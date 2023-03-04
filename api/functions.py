@@ -1,21 +1,31 @@
-from config import MAX_IMAGE_SIZE
+from config import MAX_IMAGE_SIZE, CUSTOM_HEADERS
 from random import randint
+from tempfile import NamedTemporaryFile
 import aiohttp
 import aiofiles
 
 MAX_IMAGE_SIZE = MAX_IMAGE_SIZE * 1000000
 
 
-async def download_image(url):
+async def download_image(url: str) -> str:
     file_name = f"{randint(6969, 6999)}.jpg"
     async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
+        url_headers = get_headers_for_url(url)
+        async with session.get(url, headers=url_headers) as resp:
             if resp.status == 200:
-                if int(resp.headers['Content-Length']) > MAX_IMAGE_SIZE:
+                if int(resp.headers["Content-Length"]) > MAX_IMAGE_SIZE:
                     return False
-                f = await aiofiles.open(file_name, mode='wb')
+                f = await aiofiles.open(file_name, mode="wb")
                 await f.write(await resp.read())
                 await f.close()
             else:
                 return False
     return file_name
+
+
+def get_headers_for_url(url: str) -> dict[str, str]:
+    """Returns custom headers for a given URL"""
+    for k, v in CUSTOM_HEADERS.items():
+        if k in url:
+            return v
+    return {}
