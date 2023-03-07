@@ -18,7 +18,7 @@ async def detect_nsfw(url: str):
     return await classify(url)
 
 
-@async_cache(10)
+@async_cache(30 * 60)
 async def classify(url: str) -> dict[str, dict[str, Union[float, bool]]]:
     image = await download_image(url)
     if image is None:
