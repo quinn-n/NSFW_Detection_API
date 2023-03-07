@@ -2,6 +2,7 @@ import argparse
 import json
 from os import listdir
 from os.path import isfile, join, exists, isdir, abspath
+from typing import Iterable
 
 import numpy as np
 import tensorflow as tf
@@ -12,7 +13,9 @@ import tensorflow_hub as hub
 IMAGE_DIM = 224  # required/default image dimensionality
 
 
-def load_images(image_paths, image_size, verbose=True):
+def load_images(
+    image_paths: Iterable[str], image_size: tuple[int, int], verbose: bool = True
+):
     """
     Function for loading images into numpy arrays for passing to model.predict
     inputs:
@@ -63,7 +66,9 @@ def load_model(model_path):
     return model
 
 
-def classify(model, input_paths, image_dim=IMAGE_DIM):
+def classify(
+    model, input_paths: Iterable[str], image_dim: int = IMAGE_DIM
+) -> dict[str, dict[str, float]]:
     """Classify given a model, input paths (could be single string), and image dimensionality...."""
     images, image_paths = load_images(input_paths, (image_dim, image_dim))
     probs = classify_nd(model, images)
