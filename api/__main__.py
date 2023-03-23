@@ -8,6 +8,11 @@ from api.functions import download_image
 from config import PORT
 from api.cache import async_cache
 
+
+NSFWJson = dict[str, dict[str, Union[float, bool]]]
+NSFWError = dict[str, str]
+
+
 model = predict.load_model("nsfw_detector/nsfw_model.h5")
 
 
@@ -19,7 +24,7 @@ async def detect_nsfw(url: str):
 
 
 @async_cache(30 * 60)
-async def classify(url: str) -> dict[str, dict[str, Union[float, bool]]]:
+async def classify(url: str) -> Union[NSFWJson, NSFWError]:
     image = await download_image(url)
     if image is None:
         return {"ERROR": "IMAGE SIZE TOO LARGE OR INCORRECT URL"}

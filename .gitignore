@@ -3,3 +3,4 @@
 *.webp
 *.tmp
 .certificates
+*__pycache__*
