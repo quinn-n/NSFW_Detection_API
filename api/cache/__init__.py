@@ -3,7 +3,6 @@ from threading import Timer
 from typing import AsyncGenerator, Any, Callable, Optional, Union, Iterable, Awaitable
 from functools import update_wrapper
 
-import click
 from attr import attrs, attrib
 
 
@@ -85,21 +84,18 @@ def async_cache(time_to_live: Optional[int] = None) -> Callable[[Callable], "Wra
         @attrs(kw_only=True)
         class Wrapper:
             cache = attrib(type=Cache)  # type: Cache
-            running_cache = attrib(default=Cache(), type=Cache)  # type: Cache
+            running_cache = attrib(type=Cache)  # type: Cache
 
             async def __call__(self, *args, **kwargs):
                 cache_entry = self.cache.get_entry_or_none(args, kwargs)
                 if cache_entry is None:
                     running_entry = self.running_cache.get_entry_or_none(args, kwargs)
-                    click.echo(
-                        f"Got {len(self.running_cache.entries)} running_cache entries."
-                    )
-                    if running_entry is not None:
-                        click.echo("running cache hit")
-                        return await running_entry.result
-                    else:
-                        click.echo("running cache miss")
 
+                    # Cache of currently running items
+                    if running_entry is not None:
+                        return await running_entry.result
+                    # New args, run function
+                    else:
                         async def update_future_with_result() -> Results:
                             result = await fcn(*args, **kwargs)
                             future.set_result(result)
@@ -114,17 +110,18 @@ def async_cache(time_to_live: Optional[int] = None) -> Callable[[Callable], "Wra
                         running_cache_entry = self.running_cache.create_entry(
                             args, kwargs, future
                         )
+
                         await update_future_with_result()
                         result = await future
                         self.running_cache.remove_entry(running_cache_entry)
                         return result
+                # Identical function call in cache, return cached result
                 else:
-                    click.echo("existing cache hit")
                     return cache_entry.result
 
             @classmethod
             def build(cls) -> "Wrapper":
-                return cls(cache=Cache())
+                return cls(cache=Cache(), running_cache=Cache())
 
         wrapper = Wrapper.build()
         update_wrapper(wrapper, fcn)
