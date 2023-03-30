@@ -77,9 +77,7 @@ def async_cache(time_to_live: Optional[int] = None) -> Callable[[Callable], "Wra
                         loop = asyncio.get_event_loop()
                         future = loop.create_future()
 
-                        running_cache_entry = self.running_cache.create_entry(
-                            key, future
-                        )
+                        self.running_cache.create_entry(key, future)
 
                         await update_future_with_result()
                         result = await future
