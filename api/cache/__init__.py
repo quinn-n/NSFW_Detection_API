@@ -1,80 +1,48 @@
 import asyncio
 from threading import Timer
-from typing import AsyncGenerator, Any, Callable, Optional, Union, Iterable, Awaitable
+from typing import (
+    Any,
+    Callable,
+    Optional,
+    Hashable,
+)
 from functools import update_wrapper
 
 from attr import attrs, attrib
 
 
-Args = list[Any]
-KWArgs = tuple[str, Any]
 Results = Any
-
-
-@attrs(frozen=True, kw_only=True, auto_attribs=True, slots=True)
-class CacheEntry:
-    args: tuple
-    kwargs: dict[str, Any]
-    result: Any
-
-    @classmethod
-    def create_entry(
-        cls, args: tuple, kwargs: dict[str, Any], result: Any
-    ) -> "CacheEntry":
-        """Creates a new `CacheEntry`"""
-        return cls(
-            args=args,
-            kwargs=kwargs,
-            result=result,
-        )
+_CacheEntries = dict[Hashable, Results]
 
 
 @attrs(slots=True)
 class Cache:
-    entries = attrib(default=[], type=list[CacheEntry])
+    entries = attrib(factory=lambda: {}, type=_CacheEntries)  # type: _CacheEntries
 
     def create_entry(
         self,
-        args: tuple,
-        kwargs: dict[str, Any],
+        key: Hashable,
         result: Any,
         time_to_live: Optional[int] = None,
-    ) -> CacheEntry:
+    ) -> None:
         """Adds an entry to the `Cache`'s entry list
         If `time_to_live` is provided, deletes the entry after `time_to_live` seconds"""
-        entry = CacheEntry.create_entry(args, kwargs, result)
-        self.entries.append(entry)
+        self.entries[key] = result
 
         if time_to_live is not None:
-            self._set_timer(entry, time_to_live)
+            self._set_timer(key, time_to_live)
 
-        return entry
-
-    def add_entry(self, entry: CacheEntry, time_to_live: Optional[int] = None) -> None:
-        """Manually add a `CacheEntry`"""
-        self.entries.append(entry)
-        if time_to_live is not None:
-            self._set_timer(entry, time_to_live)
-
-    def get_entry_or_none(
-        self, args: tuple, kwargs: dict[str, Any]
-    ) -> Optional[CacheEntry]:
+    def get_entry_or_none(self, key: Hashable) -> Optional[Results]:
         """Returns a cache entry for given args and kwargs if one exists"""
-        for entry in self.entries:
-            if entry.args == args and entry.kwargs == kwargs:
-                return entry
-        return None
+        return self.entries.get(key, None)
 
-    def remove_entry(self, entry: CacheEntry) -> None:
+    def remove_entry(self, key: Hashable) -> None:
         """Manually remove an entry from the cache"""
-        self.entries.remove(entry)
+        self.entries.pop(key)
 
-    def _set_timer(self, entry: CacheEntry, time_to_live: int) -> None:
+    def _set_timer(self, key: Hashable, time_to_live: int) -> None:
         """Creates a timer to delete an entry"""
-        Timer(time_to_live, lambda: self.remove_entry(entry)).start()
-
-
-RunningArgs = dict[tuple[Args, KWArgs], asyncio.Future[Results]]
+        Timer(time_to_live, lambda: self.remove_entry(key)).start()
 
 
 def async_cache(time_to_live: Optional[int] = None) -> Callable[[Callable], "Wrapper"]:
@@ -83,24 +51,26 @@ def async_cache(time_to_live: Optional[int] = None) -> Callable[[Callable], "Wra
     def inner(fcn: Callable) -> "Wrapper":
         @attrs(kw_only=True)
         class Wrapper:
-            cache = attrib(type=Cache)  # type: Cache
-            running_cache = attrib(type=Cache)  # type: Cache
+            cache = attrib(factory=lambda: Cache(), type=Cache)  # type: Cache
+            running_cache = attrib(factory=lambda: Cache(), type=Cache)  # type: Cache
 
             async def __call__(self, *args, **kwargs):
-                cache_entry = self.cache.get_entry_or_none(args, kwargs)
+                key = (args, tuple(kwargs.items()))
+                cache_entry = self.cache.get_entry_or_none(key)
                 if cache_entry is None:
-                    running_entry = self.running_cache.get_entry_or_none(args, kwargs)
+                    running_entry = self.running_cache.get_entry_or_none(key)
 
                     # Cache of currently running items
                     if running_entry is not None:
-                        return await running_entry.result
+                        return await running_entry
                     # New args, run function
                     else:
+
                         async def update_future_with_result() -> Results:
                             result = await fcn(*args, **kwargs)
                             future.set_result(result)
                             self.cache.create_entry(
-                                args, kwargs, result, time_to_live=time_to_live
+                                key, result, time_to_live=time_to_live
                             )
                             return result
 
@@ -108,20 +78,20 @@ def async_cache(time_to_live: Optional[int] = None) -> Callable[[Callable], "Wra
                         future = loop.create_future()
 
                         running_cache_entry = self.running_cache.create_entry(
-                            args, kwargs, future
+                            key, future
                         )
 
                         await update_future_with_result()
                         result = await future
-                        self.running_cache.remove_entry(running_cache_entry)
+                        self.running_cache.remove_entry(key)
                         return result
                 # Identical function call in cache, return cached result
                 else:
-                    return cache_entry.result
+                    return cache_entry
 
             @classmethod
             def build(cls) -> "Wrapper":
-                return cls(cache=Cache(), running_cache=Cache())
+                return cls()
 
         wrapper = Wrapper.build()
         update_wrapper(wrapper, fcn)
