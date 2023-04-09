@@ -4,6 +4,4 @@ from nsfw_detector import predict
 
 app = FastAPI()
 
-__all__ = (
-    "predict",
-)
+__all__ = ("predict",)

@@ -2,6 +2,7 @@ from typing import Union
 
 import uvicorn
 import click
+from fastapi import Request
 
 from api import predict, app
 from api.functions import download_image
@@ -17,9 +18,11 @@ model = predict.load_model("nsfw_detector/nsfw_model.h5")
 
 
 @app.get("/")
-async def detect_nsfw(url: str):
+async def detect_nsfw(request: Request):
+    url = request.headers.get("url")
     if not url:
         return {"ERROR": "URL PARAMETER EMPTY"}
+    assert url is not None
     return await classify(url)
 
 
