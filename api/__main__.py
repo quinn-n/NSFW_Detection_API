@@ -30,23 +30,7 @@ async def classify(url: str) -> Union[NSFWJson, NSFWError]:
         return {"ERROR": "IMAGE SIZE TOO LARGE OR INCORRECT URL"}
     results = predict.classify(model, image.name)
     image.close()
-    hentai = results["data"]["hentai"]
-    sexy = results["data"]["sexy"]
-    porn = results["data"]["porn"]
-    drawings = results["data"]["drawings"]
-    neutral = results["data"]["neutral"]
-    if neutral >= 25:
-        results["data"]["is_nsfw"] = False
-        return results
-    elif (sexy + porn + hentai) >= 70:
-        results["data"]["is_nsfw"] = True
-        return results
-    elif drawings >= 40:
-        results["data"]["is_nsfw"] = False
-        return results
-    else:
-        results["data"]["is_nsfw"] = False
-        return results
+    return results
 
 
 @click.command()
