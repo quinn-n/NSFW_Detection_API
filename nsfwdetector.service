@@ -1,0 +1,7 @@
+[Unit]
+Description=NSFW Detection API
+After=network.target
+
+[Service]
+ExecStart=cd /home/nsfwdetector/nsfwdetector && pew in nsfwblocker python -m api
+Restart=always
