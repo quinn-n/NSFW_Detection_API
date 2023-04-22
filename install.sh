@@ -2,7 +2,7 @@
 
 # Install python dependencies inside pew env
 pew new -a `pwd` nsfwdetector -d
-pew in nsfwdetector cd `pwd` && pip install -r requirements.txt
+pew in nsfwdetector pip install -r requirements.txt
 
 # Create user systemd service
 mkdir -p ~/.config/systemd/user
