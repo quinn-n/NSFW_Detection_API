@@ -3,7 +3,7 @@ Description=NSFW Detection API
 After=network.target
 
 [Service]
-ExecStart=cd /home/nsfwdetector/nsfwdetector && pew in nsfwdetector python -m api
+ExecStart=pew in nsfwdetector python -m api
 Restart=always
 
 [Install]
