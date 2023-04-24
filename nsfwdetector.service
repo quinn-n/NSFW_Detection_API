@@ -3,6 +3,7 @@ Description=NSFW Detection API
 After=network.target
 
 [Service]
+WorkingDirectory=/home/nsfwblocker/nsfwdetector
 ExecStart=pew in nsfwdetector python -m api
 Restart=always
 
