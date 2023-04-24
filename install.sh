@@ -5,7 +5,7 @@ pew new -a `pwd` nsfwdetector -d
 pew in nsfwdetector pip install -r requirements.txt
 
 # Create user systemd service
-cp nsfwdetector.service /etc/systemd/system/
-systemctl --user daemon-reload
+sudo cp nsfwdetector.service /etc/systemd/system/
+sudo systemctl daemon-reload
 
-echo "Run 'systemctl enable --user --now nsfwdetector' to enable & start the service."
+echo "Run 'systemctl enable --now nsfwdetector' to enable & start the service."
